@@ -9,6 +9,8 @@ import Carros from './pages/carros/Carros';
 import Abastecimentos from './pages/abastecimentos/Abastecimentos';
 import MetaDiaria from './pages/metas/MetaDiaria';
 import Manutencoes from './pages/manutencoes/Manutencoes';
+import AvaliadorCorrida from './pages/avaliador/AvaliadorCorrida';
+import ImportacaoRecibos from './pages/importacao/ImportacaoRecibos';
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
           <Route path="/abastecimentos" element={<PrivateRoute><Abastecimentos /></PrivateRoute>} />
           <Route path="/metas" element={<PrivateRoute><MetaDiaria /></PrivateRoute>} />
           <Route path="/manutencoes" element={<PrivateRoute><Manutencoes /></PrivateRoute>} />
+          <Route path="/avaliador" element={<PrivateRoute><AvaliadorCorrida /></PrivateRoute>} />
+          <Route path="/importacao" element={<PrivateRoute><ImportacaoRecibos /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AuthProvider>

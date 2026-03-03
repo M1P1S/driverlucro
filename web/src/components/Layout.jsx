@@ -18,6 +18,8 @@ const Layout = ({ children }) => {
   { path: '/abastecimentos', label: '⛽ Abastecimentos' },
   { path: '/manutencoes', label: '🔧 Manutenções' },
   { path: '/carros', label: '🚗 Meus Carros' },
+  { path: '/avaliador', label: '🚦 Avaliador' },
+  { path: '/importacao', label: '📥 Importar Recibos' },
 ];
 
   return (
