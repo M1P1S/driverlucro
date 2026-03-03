@@ -264,4 +264,113 @@ const getConfigAvaliador = async (req, res) => {
   }
 };
 
-module.exports = { avaliarCorrida, listarAvaliacoes, getConfigAvaliador };
+/**
+ * Avaliação rápida para o overlay nativo Android.
+ * Recebe apenas os dados básicos da notificação e busca automaticamente
+ * as configurações do veículo do usuário (combustível, consumo).
+ */
+const avaliarRapido = async (req, res) => {
+  const { plataforma, valor_ofertado, distancia_km, tempo_estimado_min } = req.body;
+
+  if (!plataforma || !valor_ofertado || !distancia_km) {
+    return res.status(400).json({
+      error: 'Campos obrigatórios: plataforma, valor_ofertado, distancia_km',
+    });
+  }
+
+  try {
+    const { data: abastecimentos } = await supabaseAdmin
+      .from('abastecimentos')
+      .select('km_por_litro, valor_total, litros')
+      .eq('user_id', req.user.id)
+      .not('km_por_litro', 'is', null)
+      .order('data', { ascending: false })
+      .limit(10);
+
+    let km_por_litro = 10;
+    let preco_combustivel = 6.00;
+
+    if (abastecimentos && abastecimentos.length > 0) {
+      const media = abastecimentos.reduce((s, a) => s + Number(a.km_por_litro), 0) / abastecimentos.length;
+      km_por_litro = Number(media.toFixed(1));
+      const ultimo = abastecimentos[0];
+      if (Number(ultimo.litros) > 0) {
+        preco_combustivel = Number((Number(ultimo.valor_total) / Number(ultimo.litros)).toFixed(2));
+      }
+    } else {
+      const { data: carro } = await supabaseAdmin
+        .from('carros')
+        .select('consumo_medio_estimado')
+        .eq('user_id', req.user.id)
+        .eq('ativo', true)
+        .limit(1)
+        .single();
+      if (carro?.consumo_medio_estimado) {
+        km_por_litro = Number(carro.consumo_medio_estimado);
+      }
+    }
+
+    const taxa_percentual = TAXAS_PLATAFORMA[plataforma.toLowerCase()] || 25;
+    const custo_combustivel = (Number(distancia_km) / km_por_litro) * preco_combustivel;
+    const desconto_plataforma = Number(valor_ofertado) * (taxa_percentual / 100);
+    const valor_liquido = Number(valor_ofertado) - desconto_plataforma - custo_combustivel;
+    const horas_estimadas = Number(tempo_estimado_min || 0) / 60;
+    const ganho_por_hora = horas_estimadas > 0 ? valor_liquido / horas_estimadas : 0;
+    const ganho_por_km = Number(distancia_km) > 0 ? valor_liquido / Number(distancia_km) : 0;
+    const percentual_custo = Number(valor_ofertado) > 0 ? (custo_combustivel / Number(valor_ofertado)) * 100 : 0;
+
+    const trintaDiasAtras = new Date();
+    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+    const { data: lancamentos30d } = await supabaseAdmin
+      .from('lancamentos')
+      .select('valor_liquido, horas_trabalhadas')
+      .eq('user_id', req.user.id)
+      .gte('data', trintaDiasAtras.toISOString().split('T')[0]);
+
+    let ganho_medio_hora = 0;
+    if (lancamentos30d && lancamentos30d.length > 0) {
+      const totLiq = lancamentos30d.reduce((s, l) => s + Number(l.valor_liquido), 0);
+      const totHoras = lancamentos30d.reduce((s, l) => s + Number(l.horas_trabalhadas || 0), 0);
+      ganho_medio_hora = totHoras > 0 ? totLiq / totHoras : 0;
+    }
+
+    let pontos = 0;
+    if (valor_liquido >= 5) pontos += 25;
+    else if (valor_liquido >= 2) pontos += 10;
+
+    if (ganho_medio_hora > 0) {
+      const pct = (ganho_por_hora / ganho_medio_hora) * 100;
+      if (pct >= 90) pontos += 30;
+      else if (pct >= 70) pontos += 15;
+    } else {
+      if (ganho_por_hora >= 15) pontos += 30;
+      else if (ganho_por_hora >= 10) pontos += 15;
+    }
+
+    if (percentual_custo <= 15) pontos += 25;
+    else if (percentual_custo <= 25) pontos += 15;
+
+    if (ganho_por_km >= 1.5) pontos += 20;
+    else if (ganho_por_km >= 0.8) pontos += 10;
+
+    let verdict;
+    if (pontos >= 70) verdict = 'ACEITAR';
+    else if (pontos >= 40) verdict = 'AVALIAR';
+    else verdict = 'REJEITAR';
+
+    return res.json({
+      verdict,
+      score: pontos,
+      platform: plataforma,
+      valor_liquido: Number(valor_liquido.toFixed(2)),
+      ganho_por_km: Number(ganho_por_km.toFixed(2)),
+      ganho_por_hora: Number(ganho_por_hora.toFixed(2)),
+      custo_combustivel: Number(custo_combustivel.toFixed(2)),
+      message: `${verdict} — ${pontos} pts`,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { avaliarCorrida, listarAvaliacoes, getConfigAvaliador, avaliarRapido };

@@ -11,6 +11,7 @@ import MetaDiaria from './pages/metas/MetaDiaria';
 import Manutencoes from './pages/manutencoes/Manutencoes';
 import AvaliadorCorrida from './pages/avaliador/AvaliadorCorrida';
 import ImportacaoRecibos from './pages/importacao/ImportacaoRecibos';
+import ConfiguracaoOverlay from './pages/overlay/ConfiguracaoOverlay';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="/manutencoes" element={<PrivateRoute><Manutencoes /></PrivateRoute>} />
           <Route path="/avaliador" element={<PrivateRoute><AvaliadorCorrida /></PrivateRoute>} />
           <Route path="/importacao" element={<PrivateRoute><ImportacaoRecibos /></PrivateRoute>} />
+          <Route path="/overlay" element={<PrivateRoute><ConfiguracaoOverlay /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AuthProvider>

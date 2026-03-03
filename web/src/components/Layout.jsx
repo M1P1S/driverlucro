@@ -19,6 +19,7 @@ const Layout = ({ children }) => {
   { path: '/manutencoes', label: '🔧 Manutenções' },
   { path: '/carros', label: '🚗 Meus Carros' },
   { path: '/avaliador', label: '🚦 Avaliador' },
+  { path: '/overlay', label: '⚡ Overlay ao Vivo' },
   { path: '/importacao', label: '📥 Importar Recibos' },
 ];
 
