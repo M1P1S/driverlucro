@@ -7,4 +7,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  server: {
+    host: true,
+    proxy: {
+      '/api': 'http://localhost:3001',
+    },
+  },
 })
